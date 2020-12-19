@@ -1,44 +1,36 @@
-library(igraph)
-
-#3번 문제 
-df.fb <- read.table(file.choose(), header = F)
-
-#4번 문제
-G.fb <- graph.data.frame(df.fb , directed = FALSE) 
-plot(G.fb)
-G.fb
-df.fb
-centralization.degree(G.fb, normalized = FALSE) # 연결 정도
-centralization.betweenness(G.fb) #중개
-centralization.closeness(G.fb) # 근접도
-
-
-#5번 문제 / #6번 문제 
-plot(degree(G.fb), main="투표 분포",ylab="투표 빈도" , xlab="투표자" ,type="h")
+library(dplyr)
+library(rpart)
+library(randomForest)
+library(e1071)
+library(class)
+ucla = read.csv("https://stats.idre.ucla.edu/stat/data/binary.csv")
+ucla$admit = factor(ucla$admit)
+str(ucla)
+n = nrow(ucla)
+i = 1:n
+trainingData <- sample(i, n*0.6)
+testData <- setdiff(i, trainingData)
+trainingData <- ucla[trainingData, ]
+testData <- ucla[testData, ]
 
 
-#7번 문제
-sortlist = sort(degree(G.fb), decreasing = TRUE )
-for(i in (1:10)){
-  cat(i,"번째 높은 값 \n")
-  print(sortlist[i])  
-  cat("\n")
-}
+treeModel <- rpart(admit~., data = trainingData, method = 'class')
+forest50 <- randomForest(admit~., data = trainingData, ntree=50)
+forest1000 <- randomForest(admit~., data = trainingData, ntree=1000)
+svm_rb <- svm(admit~., data=trainingData)
+svm_p <- svm(admit~., data=trainingData, kernel= 'polynomial')
 
-#8번 문제
-V.max <- V(G.fb)$name[degree(G.fb) == sortlist[2]]
-degree(G.fb, V.max)
+treeP = predict(treeModel, testData, type='class')
+forest50P <- predict(forest50, testData)
+forest1000P <- predict(forest1000, testData)
+svm_rbP <- predict(svm_rb, testData)
+svm_pP <- predict(svm_p, testData)
+knn <- knn(trainingData, testData, trainingData$admit) 
 
-V.max.idx <- which(V(G.fb)$name == V.max)
-V.set <- neighbors(G.fb, v=V.max.idx)
-V3 <- c(V.max.idx, V.set)
-G.fb.max <- induced_subgraph(G.fb, V3)
-V(G.fb.max)$color <- ifelse(V(G.fb.max)$name == V.max, 'red', 'green')
-V(G.fb.max)$label <- ifelse(V(G.fb.max)$name == V.max, NA, NA)
-plot(G.fb.max)
-
-
-#9번 문제
-V(G.fb.max)$size <- ifelse(V(G.fb.max)$name == V.max, 100, 20)
-plot(G.fb.max)
+table(treeP, testData$admit)
+table(forest50P, testData$admit)
+table(forest1000P, testData$admit)
+table(svm_rbP, testData$admit)
+table(svm_pP, testData$admit)
+table(knn, testData$admit)
 
